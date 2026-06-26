@@ -19,6 +19,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
+import java.io.IOException
 
 class TempleViewModel(private val repository: TempleRepository) : ViewModel() {
 
@@ -56,12 +57,12 @@ class TempleViewModel(private val repository: TempleRepository) : ViewModel() {
                         if (localFileToUpload != null && localFileToUpload.exists()) {
                             val requestFile = localFileToUpload.asRequestBody("image/*".toMediaTypeOrNull())
                             val body = MultipartBody.Part.createFormData("image", localFileToUpload.name, requestFile)
-                            
+
                             val uploadResponse = ApiConfig.imgBBApiService.uploadImage(
                                 apiKey = com.abelnumberi.galericandi.BuildConfig.IMGBB_API_KEY,
                                 image = body
                             )
-                            
+
                             if (uploadResponse.success && uploadResponse.data != null) {
                                 finalImageUrl = uploadResponse.data.url
                                 localFileToUpload.delete()
@@ -100,11 +101,20 @@ class TempleViewModel(private val repository: TempleRepository) : ViewModel() {
             try {
                 repository.deleteTemple(temple)
                 onSuccess()
-            } catch (e: Exception) {
+            } catch (e: IOException) {
+                // ini benar-benar error koneksi (timeout, no internet, dll)
                 e.printStackTrace()
                 Toast.makeText(
                     context,
                     context.getString(R.string.err_delete_offline),
+                    Toast.LENGTH_SHORT
+                ).show()
+            } catch (e: Exception) {
+                // error lain (selain koneksi), jangan disamakan dengan pesan "koneksi mati"
+                e.printStackTrace()
+                Toast.makeText(
+                    context,
+                    "Gagal menghapus candi: ${e.message}",
                     Toast.LENGTH_SHORT
                 ).show()
             }

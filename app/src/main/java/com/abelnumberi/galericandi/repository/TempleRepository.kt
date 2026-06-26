@@ -12,6 +12,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
+import retrofit2.HttpException
 import java.io.File
 
 class TempleRepository(private val templeDao: TempleDao) {
@@ -45,8 +46,14 @@ class TempleRepository(private val templeDao: TempleDao) {
     suspend fun deleteTemple(temple: Temple) {
         withContext(Dispatchers.IO) {
             // Attempt delete from remote server first
-            ApiConfig.templeApiService.deleteTemple(temple.id)
-            // Only delete locally if the remote request was successful (doesn't throw exception)
+            try {
+                ApiConfig.templeApiService.deleteTemple(temple.id)
+            } catch (e: HttpException) {
+                // 404 = item ini cuma ada di lokal (dibuat saat offline, belum pernah ke server).
+                // Anggap aman, lanjut hapus lokal. Selain 404, lempar lagi errornya.
+                if (e.code() != 404) throw e
+            }
+            // Hapus lokal tetap jalan kalau remote sukses ATAU 404
             templeDao.deleteTemple(temple)
         }
     }
@@ -56,10 +63,10 @@ class TempleRepository(private val templeDao: TempleDao) {
             try {
                 // Fetch the current temple list on the server
                 val serverTemples = ApiConfig.templeApiService.getTemples(userId)
-                
+
                 // Get all local temples
                 val localTemples = templeDao.getAllTemplesList(userId)
-                
+
                 for (temple in localTemples) {
                     if (temple.imageUrl.startsWith("file://")) {
                         try {
@@ -69,16 +76,16 @@ class TempleRepository(private val templeDao: TempleDao) {
                                 // Upload local image to ImgBB
                                 val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
                                 val body = MultipartBody.Part.createFormData("image", file.name, requestFile)
-                                
+
                                 val uploadResponse = ApiConfig.imgBBApiService.uploadImage(
                                     apiKey = BuildConfig.IMGBB_API_KEY,
                                     image = body
                                 )
-                                
+
                                 if (uploadResponse.success && uploadResponse.data != null) {
                                     val remoteUrl = uploadResponse.data.url
                                     val updatedTemple = temple.copy(imageUrl = remoteUrl)
-                                    
+
                                     // Check if this temple already exists on the MockAPI server
                                     val existsOnServer = serverTemples.any { it.id == temple.id }
                                     if (existsOnServer) {
@@ -86,10 +93,10 @@ class TempleRepository(private val templeDao: TempleDao) {
                                     } else {
                                         ApiConfig.templeApiService.createTemple(updatedTemple)
                                     }
-                                    
+
                                     // Delete local cache image file after successful upload to save space
                                     file.delete()
-                                    
+
                                     // Update local room database with remote url
                                     templeDao.insertTemple(updatedTemple)
                                 }
@@ -100,7 +107,7 @@ class TempleRepository(private val templeDao: TempleDao) {
                         }
                     }
                 }
-                
+
                 // Fetch final list to resolve any outstanding server-side additions/removals
                 fetchTemplesFromServer(userId)
             } catch (e: Exception) {
