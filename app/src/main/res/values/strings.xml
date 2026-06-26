@@ -1,0 +1,26 @@
+<resources>
+    <!-- App Name -->
+    <string name="app_name">Galeri Candi</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_profile">Profile</string>
+    <string name="nav_add_candi">Tambah Candi</string>
+    <string name="nav_detail">Detail</string>
+
+    <!-- Buttons -->
+    <string name="btn_save">Simpan</string>
+    <string name="btn_cancel">Batal</string>
+    <string name="btn_yes">Ya</string>
+    <string name="btn_google_sign_in">Masuk dengan Google</string>
+    <string name="btn_sign_out">Keluar</string>
+
+    <!-- Placeholders & Error Messages -->
+    <string name="err_empty_fields">Harap isi semua kolom</string>
+    <string name="err_no_photo">Harap pilih foto candi terlebih dahulu</string>
+    <string name="err_load_failed">Gagal memuat data</string>
+    <string name="err_connection_failed">Koneksi gagal saat menghapus/menyimpan</string>
+
+    <!-- Special Offline Messages -->
+    <string name="err_delete_offline">Gagal menghapus candi karena koneksi internet mati.</string>
+</resources>
